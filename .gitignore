@@ -1,2 +1,5 @@
 audio
 data
+data_overlap
+bal.wav
+*.npy

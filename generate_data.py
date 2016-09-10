@@ -6,13 +6,13 @@ import mfcc
 import numpy as np
 import scipy.io.wavfile as wav
 from random import randint
-trunc_len = 40
+trunc_len = 60
 amp_thres = 2000
 audio_path = "audio"
-output_path = "data"
+output_path = "data_overlap"
 suffix = ".list"
 w_len = 0.032
-w_step = 0.032
+w_step = 0.024
 filter_num = 26
 
 li_list = list()
