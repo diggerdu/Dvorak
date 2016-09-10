@@ -6,17 +6,17 @@ import numpy as np
 import pickle
 
 
-data_path = "../data/"
+data_path = "../data_overlap/"
 # Parameters
-learning_rate = 0.0001
+learning_rate = 0.00001
 training_iters = 10000000000
 batch_size = 1024
 display_step = 2
-milestone = 0.92
+milestone = 0.84
 
 # Network Parameters
 n_input = 26   # MNIST data input (img shape: 28*28)
-n_steps = 40
+n_steps = 60
 n_hidden = 64     # hidden layer num of features
 n_classes = 1   # oral / no oral
 
