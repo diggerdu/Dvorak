@@ -213,6 +213,26 @@ def fbank(signal,samplerate=16000,win_length=0.025,win_step=0.01,filters_num=26,
     feat=numpy.where(feat==0,numpy.finfo(float).eps,feat)  #同样不能出现0
     return feat,energy
    
+    
+def wav_spectrum_power(signal,samplerate=16000,win_length=0.025,win_step=0.01,filters_num=26,NFFT=512,low_freq=0,high_freq=None,pre_emphasis_coeff=0.97):
+    '''计算音频信号的功率谱
+    参数说明：
+    samplerate:采样频率
+    win_length:窗长度
+    win_step:窗间隔
+    filters_num:梅尔滤波器个数
+    NFFT:FFT大小
+    low_freq:最低频率
+    high_freq:最高频率
+    pre_emphasis_coeff:预加重系数
+    '''
+    
+    high_freq=high_freq or samplerate/2  #计算音频样本的最大频率
+    signal=pre_emphasis(signal,pre_emphasis_coeff)  #对原始信号进行预加重处理
+    frames=audio2frame(signal,win_length*samplerate,win_step*samplerate) #得到帧数组
+    spec_power=spectrum_power(frames,NFFT)  #得到每一帧FFT以后的能量谱
+    return spec_power
+
 def log_fbank(signal,samplerate=16000,win_length=0.025,win_step=0.01,filters_num=26,NFFT=512,low_freq=0,high_freq=None,pre_emphasis_coeff=0.97):
     '''计算对数值
     参数含义：同上
