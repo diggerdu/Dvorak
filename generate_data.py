@@ -23,7 +23,7 @@ train_dict_file.close()
 eva_dict_file.close()
 
 
-def generate_data(file_path, file_label):
+def generate_data(file_path):
         (rate, audio_ori) = wav.read(file_path)
         for pre_idx in xrange(audio_ori.shape[0]):
             if audio_ori[pre_idx] > amp_thres:
@@ -58,10 +58,8 @@ pickle.dump(train_fake_label, open("train_fake_label", "wb"))
 '''
 
 if __name__ == '__main__':
-    for key, value in train_dict.iteritems():
-        print key
-        tmp = generate_data("audio/train/" + key, value)
-        if tmp is not None:
-   
-            print tmp.shape
-        
+    posi_train = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/train/" + key for key, value in train_dict.iteritems() if value == "萝卜头"])))
+    nega_train = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/train/" + key for key, value in train_dict.iteritems() if not value == "萝卜头"])))
+    posi_eva = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/eva/" + key for key, value in train_dict.iteritems() if value == "萝卜头"])))
+    posi_eva = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/eva/" + key for key, value in train_dict.iteritems() if not value == "萝卜头"])))
+    
