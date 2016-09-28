@@ -6,7 +6,7 @@ import numpy as np
 import pickle
 
 
-data_path = "../data_overlap/"
+data_path = "../data_spetrum/"
 # Parameters
 learning_rate = 0.00001
 training_iters = 10000000000
@@ -15,7 +15,7 @@ display_step = 2
 milestone = 0.84
 
 # Network Parameters
-n_input = 26   # MNIST data input (img shape: 28*28)
+n_input = 257   # MNIST data input (img shape: 28*28)
 n_steps = 60
 n_hidden = 64     # hidden layer num of features
 n_classes = 1   # oral / no oral
@@ -71,10 +71,10 @@ init = tf.initialize_all_variables()
 
 #load data
 
-train_true_data = np.load(data_path + "train_true.npy")
-train_fake_data = np.load(data_path + "train_fake.npy")
-eva_true_data = np.load(data_path + "eva_true.npy")
-eva_fake_data = np.load(data_path + "eva_fake.npy")
+posi_train_data = np.load(data_path + "posi_train.npy")
+nega_train_data = np.load(data_path + "nega_train.npy")
+eva_true_data = np.load(data_path + "posi_eva.npy")
+eva_fake_data = np.load(data_path + "nega_eva.npy")
 
 train_data = np.vstack((train_true_data, train_fake_data))
 train_label = np.vstack((np.ones((train_true_data.shape[0], 1)), np.zeros((train_fake_data.shape[0], 1))))
