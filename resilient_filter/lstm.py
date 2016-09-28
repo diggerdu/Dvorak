@@ -26,6 +26,7 @@ y = tf.placeholder("float", [None, n_classes])
 
 # Define weights
 weights = {
+    'filters' : tf.Variable(tf.random_normal([257, 26]))
     'out': tf.Variable(tf.random_normal([n_hidden, n_classes]))
 }
 biases = {
@@ -39,6 +40,7 @@ def RNN(x, weights, biases):
     # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
 
     # Permuting batch_size and n_steps
+    x = tf.matmul(x, weights['filters'])
     x = tf.transpose(x, [1, 0, 2])
     # Reshaping to (n_steps*batch_size, n_input)
     x = tf.reshape(x, [-1, n_input])
@@ -76,12 +78,12 @@ nega_train_data = np.load(data_path + "nega_train.npy")
 eva_true_data = np.load(data_path + "posi_eva.npy")
 eva_fake_data = np.load(data_path + "nega_eva.npy")
 
-train_data = np.vstack((train_true_data, train_fake_data))
-train_label = np.vstack((np.ones((train_true_data.shape[0], 1)), np.zeros((train_fake_data.shape[0], 1))))
+train_data = np.vstack((posi_true_data, nega_train_data))
+train_label = np.vstack((np.ones((posi_train_data.shape[0], 1)), np.zeros((nega_train_data.shape[0], 1))))
 print (train_data.shape)
 
-eva_data = np.vstack((eva_true_data, eva_fake_data))
-eva_label = np.vstack((np.ones((eva_true_data.shape[0], 1)), np.zeros((eva_fake_data.shape[0], 1))))
+eva_data = np.vstack((posi_eva_data, nega_eva_data))
+eva_label = np.vstack((np.ones((posi_eva_data.shape[0], 1)), np.zeros((nega_eva_data.shape[0], 1))))
 
 validate_best = 0
 # Launch the graph
