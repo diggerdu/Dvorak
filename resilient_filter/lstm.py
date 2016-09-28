@@ -6,7 +6,7 @@ import numpy as np
 import pickle
 
 
-data_path = "../data_spetrum/"
+data_path = "../data_spectrum/"
 # Parameters
 learning_rate = 0.00001
 training_iters = 10000000000
@@ -26,7 +26,7 @@ y = tf.placeholder("float", [None, n_classes])
 
 # Define weights
 weights = {
-    'filters' : tf.Variable(tf.random_normal([257, 26]))
+    'filters' : tf.Variable(tf.random_normal([ 257, 26])),
     'out': tf.Variable(tf.random_normal([n_hidden, n_classes]))
 }
 biases = {
@@ -40,10 +40,18 @@ def RNN(x, weights, biases):
     # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
 
     # Permuting batch_size and n_steps
+    print (weights['filters'].get_shape())
+    x_shape = x.get_shape().as_list()
+    print (x_shape, type(x_shape), type(x_shape[0]))
+    x = tf.reshape(x, [ -1, x_shape[2]])
+    print (x.get_shape())
     x = tf.matmul(x, weights['filters'])
+    print (x.get_shape())
+    x = tf.reshape(x, [-1, x_shape[1], 26])
+    print (x.get_shape())
     x = tf.transpose(x, [1, 0, 2])
     # Reshaping to (n_steps*batch_size, n_input)
-    x = tf.reshape(x, [-1, n_input])
+    x = tf.reshape(x, [-1, 26])
     # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
     x = tf.split(0, n_steps, x)
 
@@ -75,10 +83,10 @@ init = tf.initialize_all_variables()
 
 posi_train_data = np.load(data_path + "posi_train.npy")
 nega_train_data = np.load(data_path + "nega_train.npy")
-eva_true_data = np.load(data_path + "posi_eva.npy")
-eva_fake_data = np.load(data_path + "nega_eva.npy")
+posi_eva_data = np.load(data_path + "posi_eva.npy")
+nega_eva_data = np.load(data_path + "nega_eva.npy")
 
-train_data = np.vstack((posi_true_data, nega_train_data))
+train_data = np.vstack((posi_train_data, nega_train_data))
 train_label = np.vstack((np.ones((posi_train_data.shape[0], 1)), np.zeros((nega_train_data.shape[0], 1))))
 print (train_data.shape)
 

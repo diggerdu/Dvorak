@@ -57,16 +57,23 @@ pickle.dump(train_fake_label, open("train_fake_label", "wb"))
 
 '''
 
+def reshape(mat):
+    mat = mat.reshape((mat.shape[0], mat.shape[2],mat.shape[3]))
+    return mat
 if __name__ == '__main__':
     posi_train = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/train/" + key for key, value in train_dict.iteritems() if value == "萝卜头"])))
+    posi_train = reshape(posi_train)
     print posi_train.shape
     np.save(output_path + '/' + 'posi_train', posi_train)
     nega_train = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/train/" + key for key, value in train_dict.iteritems() if not value == "萝卜头"])))
+    nega_train = reshape(nega_train)
     print nega_train.shape
     np.save(output_path + '/' + 'nega_train', nega_train)
     posi_eva = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/eva/" + key for key, value in eva_dict.iteritems() if value == "萝卜头"])))
+    posi_eva = reshape(posi_eva)
     print posi_eva.shape
     np.save(output_path + '/' + 'posi_eva', posi_eva)
     nega_eva = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/eva/" + key for key, value in eva_dict.iteritems() if not value == "萝卜头"])))
+    nega_eva = reshape(nega_eva)
     print nega_eva.shape
     np.save(output_path + '/' + 'nega_eva', nega_eva)
