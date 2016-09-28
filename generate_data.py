@@ -41,7 +41,7 @@ def generate_data(file_path):
             sur_pad = trunc_len -tmp.shape[0] - pre_pad
             tmp = np.concatenate((np.zeros((pre_pad, tmp.shape[1])), tmp, np.zeros((sur_pad, tmp.shape[1]))), axis = 0)
             tmp = tmp.reshape((1, tmp.shape[0], tmp.shape[1]))
-            print tmp.shape
+            #print tmp.shape
             return tmp
 '''
 os.chdir(output_path)
@@ -59,7 +59,14 @@ pickle.dump(train_fake_label, open("train_fake_label", "wb"))
 
 if __name__ == '__main__':
     posi_train = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/train/" + key for key, value in train_dict.iteritems() if value == "萝卜头"])))
+    print posi_train.shape
+    np.save(output_path + '/' + 'posi_train', posi_train)
     nega_train = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/train/" + key for key, value in train_dict.iteritems() if not value == "萝卜头"])))
-    posi_eva = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/eva/" + key for key, value in train_dict.iteritems() if value == "萝卜头"])))
-    posi_eva = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/eva/" + key for key, value in train_dict.iteritems() if not value == "萝卜头"])))
-    
+    print nega_train.shape
+    np.save(output_path + '/' + 'nega_train', nega_train)
+    posi_eva = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/eva/" + key for key, value in eva_dict.iteritems() if value == "萝卜头"])))
+    print posi_eva.shape
+    np.save(output_path + '/' + 'posi_eva', posi_eva)
+    nega_eva = np.asarray(filter(lambda x:x is not None, map(generate_data, ["audio/eva/" + key for key, value in eva_dict.iteritems() if not value == "萝卜头"])))
+    print nega_eva.shape
+    np.save(output_path + '/' + 'nega_eva', nega_eva)
