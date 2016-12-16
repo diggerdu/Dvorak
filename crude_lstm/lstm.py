@@ -10,9 +10,9 @@ data_path = "../data/"
 # Parameters
 learning_rate = 0.0001
 training_iters = 10000000000
-batch_size = 1024
-display_step = 2
-milestone = 0.92
+batch_size = 1
+display_step = 100
+milestone = 0.78
 
 # Network Parameters
 n_input = 26   #26 dim mfcc feature
@@ -95,10 +95,10 @@ with tf.Session() as sess:
         sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
         print (time.time() - embark,"s per batch")
         if step % display_step == 0:
-            pred_data = sess.run(pred, feed_dict={x: batch_x, y: batch_y})
+            pred_data = sess.run(pred, feed_dict={x: eva_data[:50], y: eva_label[:50]})
             discrete_output = np.where(pred_data > 0.5, 1, 0)
             right = sum(discrete_output == batch_y) 
-            print ("after %d epoch, thus far training accurancy is : %f" %(step, right / batch_size))
+            print ("after %d epoch, thus far training accurancy is : %f" %(step, right / 50))
             if  right / batch_size > milestone:
                 saver.save(sess, "./checkpoint/model.ckpt")
                 pred_data = sess.run(pred, feed_dict={x: eva_data, y: eva_label})
