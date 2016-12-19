@@ -14,16 +14,16 @@ learning_rate = 0.0001
 training_iters = 10000000000
 batch_size = 512
 display_step = 100
-milestone = 0.78
+milestone = 0.3
 
 # Network Parameters
 n_input = 26   #26 dim mfcc feature
 n_steps = 60   #the length of input sequence 
 n_hidden = 64     # the number of hidden unit
-n_classes = 26 + 1   # oral / no oral
+n_classes = 26 + 1 + 1   # oral / no oral
 
 # tf Graph input
-x = tf.placeholder("float", [None, None, n_input])
+x = tf.placeholder(tf.float32, [None, None, n_input])
 targets = tf.sparse_placeholder(tf.int32)
 seq_len = tf.placeholder(tf.int32, [None])
 
@@ -32,11 +32,12 @@ seq_len = tf.placeholder(tf.int32, [None])
 def LSTM_CTC(x, seq_len):
     batch_s  = tf.shape(x)[0]
     lstm_cell = tf.nn.rnn_cell.LSTMCell(n_hidden, forget_bias=1.0, state_is_tuple=True)
-    cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * 3, state_is_tuple=True)
-    # Get lstm cell output
-    outputs, states = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
-    outputs = tf.reshape(outputs, [-1, n_hidden])
-    W = tf.Variable(tf.truncated_normal([n_hidden, n_classes], stddev=0.1))
+    fw_cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * 3, state_is_tuple=True)
+    bw_cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * 3, state_is_tuple=True)
+    outputs, states = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, inputs=x,\
+            sequence_length=seq_len, dtype=tf.float32, time_major=False)
+    outputs = tf.reshape(outputs, [-1, 2 * n_hidden])
+    W = tf.Variable(tf.truncated_normal([2 * n_hidden, n_classes], stddev=0.1))
     b = tf.Variable(tf.constant(0., shape=[n_classes]))
     # Linear activation, using rnn inner loop last output
     logits = tf.matmul(outputs, W) + b
@@ -54,7 +55,7 @@ logits = LSTM_CTC(x, seq_len)
 cost = tf.reduce_mean(tf.nn.ctc_loss(targets, logits, seq_len, time_major=True))
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
-decoded, _ = tf.nn.ctc_greedy_decoder(logits, seq_len)
+decoded, _ = tf.nn.ctc_beam_search_decoder(logits, seq_len)
 
 #label error rate
 ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), targets))
@@ -85,7 +86,9 @@ with tf.Session() as sess:
         embark = time.time()
         _, ler_ = sess.run([optimizer, ler], feed_dict={x: batch_x, targets: batch_targets, \
             seq_len: np.repeat(n_steps, idx.shape[0])})
-
+        if step % display_step == 0:
+            if ler < milestone:
+                saver.save(sess, "./checkpoint/model.ckpt")
         print ("{}s per batch and the label error rate is:{}".format(time.time()-embark, ler_))
         '''
         if step % display_step == 0:
