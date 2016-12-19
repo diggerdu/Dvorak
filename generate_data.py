@@ -72,34 +72,34 @@ for file_name, label in eva_file_dict.items():
     audio_ori = audio_ori[pre_idx:sur_idx]
     tmp, _ = mfcc.fbank(audio_ori, samplerate = rate, win_length = w_len,\
                 win_step = w_step)
-    print tmp.shape[0]
+    #print tmp.shape[0]
     if tmp.shape[0] > trunc_len:
         continue
     else:
         pre_pad = randint(0, trunc_len - tmp.shape[0])
         sur_pad = trunc_len - tmp.shape[0] - pre_pad
         tmp = np.concatenate((np.zeros((pre_pad, filter_num)), tmp, np.zeros((sur_pad, filter_num))), axis = 0)
-        print tmp.shape
         eva_data.append(tmp)
 
     label = ''.join([str(zi[0]) for zi in pinyin(unicode(label, 'utf-8'), style=0, \
             heteronym=True)])
 
     eva_label_len.append(len(label))
-    
+    label = map(lambda c:encode_dict[c], list(label))
+
     if len(label) > max_label_len:
         max_label_len = len(label)
-    label = map(lambda c:encode_dict[c], list(label))
     eva_label.append(label)
 
 for l in eva_label:
-    for i in range(max_label_len - len(label)):
+    for i in range(max_label_len - len(l)):
         l.append(-1)
-
+print "########",np.asarray(eva_label).shape
 
 eva_data = np.asarray(eva_data)
 np.save(output_path + 'eva_data', eva_data)
 np.save(output_path + 'eva_label', np.asarray(eva_label))
+
 np.save(output_path + 'eva_label_len', np.asarray(eva_label_len))
 del eva_data, eva_label, eva_label_len
 
@@ -124,19 +124,16 @@ for file_name, label in train_file_dict.items():
         tmp = np.concatenate((np.zeros((pre_pad, filter_num)), tmp, \
                 np.zeros((sur_pad, filter_num))), axis = 0)
 	train_data.append(tmp)
-        print tmp.shape
     label = ''.join([str(zi[0]) for zi in pinyin(unicode(label, 'utf-8'), style=0, \
             heteronym=True)])
     label = map(lambda c:encode_dict[c], list(label))
     train_label_len.append(len(label))
-    
     if len(label) > max_label_len:
         max_label_len = len(label)
-    label = map(lambda c:encode_dict[c], list(label))
     train_label.append(label)
 
 for l in train_label:
-    for i in range(max_label_len - len(label)):
+    for i in range(max_label_len - len(l)):
         l.append(-1)
 
 

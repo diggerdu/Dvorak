@@ -12,7 +12,7 @@ data_path = "../data/"
 # Parameters
 learning_rate = 0.0001
 training_iters = 10000000000
-batch_size = 1
+batch_size = 512
 display_step = 100
 milestone = 0.78
 
@@ -20,7 +20,7 @@ milestone = 0.78
 n_input = 26   #26 dim mfcc feature
 n_steps = 60   #the length of input sequence 
 n_hidden = 64     # the number of hidden unit
-n_classes = 1   # oral / no oral
+n_classes = 26 + 1   # oral / no oral
 
 # tf Graph input
 x = tf.placeholder("float", [None, None, n_input])
@@ -51,7 +51,7 @@ def LSTM_CTC(x, seq_len):
 logits = LSTM_CTC(x, seq_len)
 
 # Define loss and optimizer
-cost = tf.reduce_mean(tf.nn.ctc_loss(targets, logits, seq_len))
+cost = tf.reduce_mean(tf.nn.ctc_loss(targets, logits, seq_len, time_major=True))
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 decoded, _ = tf.nn.ctc_greedy_decoder(logits, seq_len)
@@ -66,9 +66,10 @@ saver = tf.train.Saver()
 
 train_data = np.load(data_path + "train_data.npy")
 train_label = np.load(data_path + "train_label.npy")
+train_label_len = np.load(data_path + 'train_label_len.npy')
 eva_data = np.load(data_path + "eva_data.npy")
 eva_label = np.load(data_path + "eva_label.npy")
-
+eva_label_len = np.load(data_path + 'eva_label_len.npy')
 
 
 validate_best = 0
@@ -80,10 +81,13 @@ with tf.Session() as sess:
     while step * batch_size < training_iters:
         idx = np.random.choice(train_data.shape[0], batch_size)
         batch_x = train_data[idx]
-        batch_y = sparse_tuple_from(train_label[idx], n_classes)
+        batch_targets = sparse_tuple_from(train_label[idx], n_classes)
+        batch_len = train_label_len[idx]
         embark = time.time()
-        _, ler_ = sess.run([optimizer, ler], feed_dict={x: batch_x, targets: batch_y, \
-            seq_len: np.repeat(n_steps, batch_x.shape[0])})
+        _, ler_ = sess.run([optimizer, ler], feed_dict={x: batch_x, targets: batch_targets, \
+        #    seq_len: np.repeat(60, idx.shape[0])})
+        seq_len: batch_len})
+
         print ("{}s per batch and the label error rate is:{}".format(time.time()-embark, ler_))
         '''
         if step % display_step == 0:
