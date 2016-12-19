@@ -10,16 +10,16 @@ from six.moves import xrange as range
 
 data_path = "../data/"
 # Parameters
-learning_rate = 0.0001
-training_iters = 10000000000
-batch_size = 512
-display_step = 100
-milestone = 0.3
+learning_rate = 0.00003
+training_iters = np.inf
+batch_size = 256
+display_step = 1
+milestone = 0.54
 
 # Network Parameters
 n_input = 26   #26 dim mfcc feature
 n_steps = 60   #the length of input sequence 
-n_hidden = 64     # the number of hidden unit
+n_hidden = 128     # the number of hidden unit
 n_classes = 26 + 1   # oral / no oral
 
 # tf Graph input
@@ -90,18 +90,21 @@ with tf.Session() as sess:
     sess.run(init)
     step = 1
     # Keep training until reach max iterations
+    best = 1000
     while step * batch_size < training_iters:
         idx = np.random.choice(train_data.shape[0], batch_size)
         batch_x = train_data[idx]
         breakpoint = time.time()
         batch_targets = sparse_tuple_from(train_label[idx], n_classes)
         embark = time.time()
-        _, ler_ = sess.run([optimizer, ler], feed_dict={x: batch_x, targets: batch_targets, \
-            seq_len: np.repeat(n_steps, idx.shape[0])})
+        _, ler_ , cost_= sess.run([optimizer, ler, cost], feed_dict={x: batch_x, 
+            targets: batch_targets, seq_len: np.repeat(n_steps, idx.shape[0])})
         if step % display_step == 0:
-            if ler < milestone:
-                saver.save(sess, "./checkpoint/model.ckpt")
-        print ("{}s per batch and the label error rate is:{}".format(time.time()-embark, ler_))
+            if ler_ < milestone:
+                if ler_ < best:
+                    best = ler_
+                    saver.save(sess, "./checkpoint/model.ckpt")
+        print ("{}s per batch and the label error rate is:{}, cost is:{}".format(time.time()-embark, ler_, cost_))
         '''
         if step % display_step == 0:
             pred_data = sess.run(pred, feed_dict={x: eva_data[:50], y: eva_label[:50]})
