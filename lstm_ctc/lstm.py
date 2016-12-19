@@ -24,23 +24,14 @@ n_hidden = 64     # the number of hidden unit
 n_classes = 1   # oral / no oral
 
 # tf Graph input
-x = tf.placeholder("float", [None, n_steps, n_input])
-y = tf.placeholder("float", [None, n_classes])
+x = tf.placeholder("float", [None, None, n_input])
+targets = tf.sparse_placeholder(tf.int32)
+seq_len = tf.placeholder(tf.int32, [None])
 
-# Define weights
-weights = {
-    'out': tf.Variable(tf.random_normal([n_hidden, n_classes]))
-}
-biases = {
-    'out': tf.Variable(tf.random_normal([n_classes]))
-}
 
-def RNN(x, weights, biases):
 
-    # Prepare data shape to match `rnn` function requirements
-    # Current data input shape: (batch_size, n_steps, n_input)
-    # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
-
+def LSTM_CTC(x, seq_len):
+    batch_s, max_timesteps = tf.shape(x)
     x = tf.transpose(x, [1, 0, 2])
     # Reshaping to (n_steps*batch_size, n_input)
     x = tf.reshape(x, [-1, n_input])
@@ -51,21 +42,30 @@ def RNN(x, weights, biases):
     lstm_cell = tf.nn.rnn_cell.LSTMCell(n_hidden, forget_bias=1.0, state_is_tuple=True)
     cell = rnn_cell.MultiRNNCell([lstm_cell] * 3, state_is_tuple=True)
     # Get lstm cell output
-    outputs, states = rnn.rnn(cell, x, dtype=tf.float32)
-
+    outputs, states = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
+    outputs = tf.reshape(outputs, [-1, n_hidden])
+    W = tf.Variable(tf.truncated_normal([n_hidden, n_classes]), stddec=0.1)
+    b = tf.Variable(tf.constant(0., shape=[n_classes]))
     # Linear activation, using rnn inner loop last output
-    return tf.sigmoid(tf.matmul(outputs[-1], weights['out']) + biases['out'])
+    logits = tf.matmul(outputs, W) + b
+    logits = tf.reshape(logits, [batch_s, -1, n_classes])
 
+    #transpose to [time, batch,feature]
+    logits = tf.transpose(logits, (1, 0 ,2))
+    return logits
+    
 
-pred = RNN(x, weights, biases)
+    
+logits = LSTM_CTC(x, seq_len)
 
 # Define loss and optimizer
-cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(pred, y))
+loss = tf.reduce_mean(tf.nn.ctc_loss(logits, targets, seq_len))
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
-# Evaluate model
-#correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-#accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+decoded, _ = tf.nn.ctc_greedy_decoder(logits, seq_len)
+
+#label error rate
+ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32)), targets)
 
 # Initializing the variables
 init = tf.initialize_all_variables()
