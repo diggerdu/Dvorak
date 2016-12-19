@@ -82,11 +82,9 @@ with tf.Session() as sess:
         idx = np.random.choice(train_data.shape[0], batch_size)
         batch_x = train_data[idx]
         batch_targets = sparse_tuple_from(train_label[idx], n_classes)
-        batch_len = train_label_len[idx]
         embark = time.time()
         _, ler_ = sess.run([optimizer, ler], feed_dict={x: batch_x, targets: batch_targets, \
-        #    seq_len: np.repeat(60, idx.shape[0])})
-        seq_len: batch_len})
+            seq_len: np.repeat(n_steps, idx.shape[0])})
 
         print ("{}s per batch and the label error rate is:{}".format(time.time()-embark, ler_))
         '''
