@@ -1,8 +1,7 @@
 from __future__ import print_function
 from __future__ import division
 import tensorflow as tf
-from tensorflow.python.ops import rnn, rnn_cell
-from 
+from ultis import sparse_tuple_from
 import numpy as np
 import pickle
 import time
@@ -11,78 +10,79 @@ from six.moves import xrange as range
 
 data_path = "../data/"
 # Parameters
-learning_rate = 0.0001
-training_iters = 10000000000
-batch_size = 1
-display_step = 100
-milestone = 0.78
+learning_rate = 0.00003
+training_iters = np.inf
+batch_size = 256
+display_step = 1
+milestone = 0.54
 
 # Network Parameters
 n_input = 26   #26 dim mfcc feature
 n_steps = 60   #the length of input sequence 
-n_hidden = 64     # the number of hidden unit
-n_classes = 1   # oral / no oral
+n_hidden = 128     # the number of hidden unit
+n_classes = 26 + 1   # oral / no oral
 
 # tf Graph input
-x = tf.placeholder("float", [None, n_steps, n_input])
-y = tf.placeholder("float", [None, n_classes])
+x = tf.placeholder(tf.float32, [None, n_steps, n_input])
+targets = tf.sparse_placeholder(tf.int32)
+seq_len = tf.placeholder(tf.int32, [None])
 
-# Define weights
-weights = {
-    'out': tf.Variable(tf.random_normal([n_hidden, n_classes]))
-}
-biases = {
-    'out': tf.Variable(tf.random_normal([n_classes]))
-}
 
-def RNN(x, weights, biases):
 
-    # Prepare data shape to match `rnn` function requirements
-    # Current data input shape: (batch_size, n_steps, n_input)
-    # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
-
-    x = tf.transpose(x, [1, 0, 2])
-    # Reshaping to (n_steps*batch_size, n_input)
-    x = tf.reshape(x, [-1, n_input])
-    # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-    x = tf.split(0, n_steps, x)
-
-    # Define a lstm cell with tensorflow
+def LSTM_CTC(x, seq_len):
+    batch_s  = tf.shape(x)[0]
     lstm_cell = tf.nn.rnn_cell.LSTMCell(n_hidden, forget_bias=1.0, state_is_tuple=True)
-    cell = rnn_cell.MultiRNNCell([lstm_cell] * 3, state_is_tuple=True)
-    # Get lstm cell output
-    outputs, states = rnn.rnn(cell, x, dtype=tf.float32)
+    fw_cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * 3, state_is_tuple=True)
+    bw_cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * 3, state_is_tuple=True)
+    #bi-directional rnn
+    '''
+    outputs, _ = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, inputs=x,\
+            sequence_length=seq_len, dtype=tf.float32, time_major=False)
+    outputs = tf.concat(2, outputs) 
+    
+    '''
+    #print ('#@$@$', outputs.get_shape().as_list())
+    #uni-directional rnn
+    outputs, _ = tf.nn.dynamic_rnn(fw_cell, x, dtype=tf.float32, time_major=False)
+    
+    ####transpose to [time, batch, output_size]
+    outputs = tf.transpose(outputs, [1, 0, 2])
+    outputs = tf.reshape(outputs, [-1, 1 * n_hidden])
+    
+    W = tf.Variable(tf.truncated_normal([1 * n_hidden, n_classes], stddev=0.1))
+    b = tf.Variable(tf.constant(0., shape=[n_classes]))
+    
+    logits = tf.matmul(outputs, W) + b
+    logits = tf.reshape(logits, [n_steps, batch_s, n_classes])
 
-    # Linear activation, using rnn inner loop last output
-    return tf.sigmoid(tf.matmul(outputs[-1], weights['out']) + biases['out'])
+    return logits
+    
 
-
-pred = RNN(x, weights, biases)
+    
+logits = LSTM_CTC(x, seq_len)
 
 # Define loss and optimizer
-cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(pred, y))
+cost = tf.reduce_mean(tf.nn.ctc_loss(targets, logits, seq_len))
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
-# Evaluate model
-#correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-#accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+#decoded, _ = tf.nn.ctc_beam_search_decoder(logits, seq_len, top_paths=3)
+
+decoded, _ = tf.nn.ctc_greedy_decoder(logits, seq_len)
+#label error rate
+ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), targets))
 
 # Initializing the variables
 init = tf.initialize_all_variables()
 saver = tf.train.Saver()
 #load data
 
-train_true_data = np.load(data_path + "train_true_data.npy")
-train_fake_data = np.load(data_path + "train_fake_data.npy")
-eva_true_data = np.load(data_path + "eva_true_data.npy")
-eva_fake_data = np.load(data_path + "eva_fake_data.npy")
+train_data = np.load(data_path + "train_data.npy")
+train_label = np.load(data_path + "train_label.npy")
+train_label_len = np.load(data_path + 'train_label_len.npy')
+eva_data = np.load(data_path + "eva_data.npy")
+eva_label = np.load(data_path + "eva_label.npy")
+eva_label_len = np.load(data_path + 'eva_label_len.npy')
 
-
-train_data = np.vstack((train_true_data, train_fake_data))
-train_label = np.vstack((np.ones((train_true_data.shape[0], 1)), np.zeros((train_fake_data.shape[0], 1))))
-
-eva_data = np.vstack((eva_true_data, eva_fake_data))
-eva_label = np.vstack((np.ones((eva_true_data.shape[0], 1)), np.zeros((eva_fake_data.shape[0], 1))))
 
 validate_best = 0
 # Launch the graph
@@ -90,13 +90,22 @@ with tf.Session() as sess:
     sess.run(init)
     step = 1
     # Keep training until reach max iterations
+    best = 1000
     while step * batch_size < training_iters:
         idx = np.random.choice(train_data.shape[0], batch_size)
         batch_x = train_data[idx]
-        batch_y = train_label[idx]
+        breakpoint = time.time()
+        batch_targets = sparse_tuple_from(train_label[idx], n_classes)
         embark = time.time()
-        sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
-        print (time.time() - embark,"s per batch")
+        _, ler_ , cost_= sess.run([optimizer, ler, cost], feed_dict={x: batch_x, 
+            targets: batch_targets, seq_len: np.repeat(n_steps, idx.shape[0])})
+        if step % display_step == 0:
+            if ler_ < milestone:
+                if ler_ < best:
+                    best = ler_
+                    saver.save(sess, "./checkpoint/model.ckpt")
+        print ("{}s per batch and the label error rate is:{}, cost is:{}".format(time.time()-embark, ler_, cost_))
+        '''
         if step % display_step == 0:
             pred_data = sess.run(pred, feed_dict={x: eva_data[:50], y: eva_label[:50]})
             discrete_output = np.where(pred_data > 0.5, 1, 0)
@@ -121,3 +130,4 @@ with tf.Session() as sess:
                 np.save("real.npy", eva_label)
         step += 1
     print("Optimization Finished!")
+    '''
