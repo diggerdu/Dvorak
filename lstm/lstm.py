@@ -8,9 +8,8 @@ import time
 
 data_path = "../data/"
 logdir = './logs'
-KEEPPROB = 0.5
 # Parameters
-learning_rate = 0.0005
+learning_rate = 0.00001
 training_iters = 10000000000
 batch_size = 768
 display_step = 2
@@ -53,7 +52,7 @@ def RNN(x, keep_prob, weights, biases):
     outputs, states = rnn.rnn(cell, x, dtype=tf.float32)
     outputs_drop = tf.nn.dropout(outputs[-1], keep_prob)
     # Linear activation, using rnn inner loop last output
-    return tf.sigmoid(tf.matmul(outputs_drop, weights['out']) + biases['out'])
+    return tf.sigmoid(tf.matmul(outputs[-1], weights['out']) + biases['out'])
 
 
 pred = RNN(x, K, weights, biases)
@@ -100,7 +99,7 @@ validate_best = 0
 with tf.Session() as sess:
     sess.run(init)
     writer = tf.summary.FileWriter(logdir, sess.graph)
-    #saver.restore(sess, "./checkpoint/extraoridinary.ckpt")
+    saver.restore(sess, "./checkpoint/extraoridinary.ckpt")
     step = 1
     # Keep training until reach max iterations
     while step * batch_size < training_iters:
@@ -108,13 +107,11 @@ with tf.Session() as sess:
         batch_x = train_data[idx]
         batch_y = train_label[idx]
         embark = time.time()
-        _, loss_sum_ = sess.run([optimizer, loss_sum], feed_dict={x: batch_x, y: batch_y, K:KEEPPROB})
+        _, loss_sum_ = sess.run([optimizer, loss_sum], feed_dict={x: batch_x, y: batch_y, K:0.7})
         debug = sess.run(accurancy, feed_dict={x: batch_x, y: batch_y, K:1.0})
         print ('debug',debug)
         writer.add_summary(loss_sum_, global_step = step)
         print (time.time() - embark,"s per batch")
-        if step % 3000 == 0:
-            saver.save(sess, './checkpoint/model-keep_prob-{}'.format(KEEPPROB))
         if step % display_step == 0:
             accurancy_sum_, accurancy_ = sess.run([accurancy_sum, accurancy], feed_dict={x: eva_data, y: eva_label, K:1.0})
             writer.add_summary(accurancy_sum_, global_step = step)
@@ -123,7 +120,7 @@ with tf.Session() as sess:
                 if accurancy_ > validate_best:
                     validate_best = accurancy_
                     if validate_best > 0.79:
-                        saver.save(sess, "./checkpoint/extraoridinary-keep_prob-{}".format(KEEPPROB))
+                        saver.save(sess, "./checkpoint/extraoridinary.ckpt")
                 print ("####thus far best validate accurancy is : %f #####" %(validate_best))
                 np.save("real.npy", eva_label)
         step += 1
