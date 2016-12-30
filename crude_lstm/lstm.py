@@ -8,11 +8,11 @@ import time
 
 data_path = "../data/"
 logdir = './logs'
-KEEPPROB = 0.5
+KEEPPROB = 0.7
 # Parameters
 learning_rate = 0.0005
 training_iters = 10000000000
-batch_size = 768
+batch_size = 1024
 display_step = 2
 milestone = 0.78
 
@@ -86,6 +86,8 @@ train_fake_data = np.load(data_path + "train_fake_data.npy")
 eva_true_data = np.load(data_path + "eva_true_data.npy")
 eva_fake_data = np.load(data_path + "eva_fake_data.npy")
 
+print ('train',train_true_data.shape)
+print ('fake', train_fake_data.shape)
 
 train_data = np.vstack((train_true_data, train_fake_data))
 train_label = np.vstack((np.ones((train_true_data.shape[0], 1)), np.zeros((train_fake_data.shape[0], 1))))
@@ -100,7 +102,7 @@ validate_best = 0
 with tf.Session() as sess:
     sess.run(init)
     writer = tf.summary.FileWriter(logdir, sess.graph)
-    #saver.restore(sess, "./checkpoint/extraoridinary.ckpt")
+    saver.restore(sess, "./checkpoint/extraoridinary.ckpt".format(KEEPPROB))
     step = 1
     # Keep training until reach max iterations
     while step * batch_size < training_iters:

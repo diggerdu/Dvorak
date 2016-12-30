@@ -39,10 +39,10 @@ train_fake_label = list()
 for file_name, label in eva_file_dict.items():
     (rate, audio_ori) = wav.read(eva_audio_path + file_name)
     for pre_idx in xrange(audio_ori.shape[0]):
-        if audio_ori[pre_idx] > amp_thres:
+        if np.abs(audio_ori[pre_idx]) > amp_thres:
             break
     for sur_idx in xrange(audio_ori.shape[0] - 1, 0 , -1):
-        if audio_ori[sur_idx] > amp_thres:
+        if np.abs(audio_ori[sur_idx]) > amp_thres:
             break
     audio_ori = audio_ori[pre_idx:sur_idx]
     tmp, _ = mfcc.fbank(audio_ori, samplerate = rate, win_length = w_len,\
@@ -75,13 +75,18 @@ del eva_fake_data
 
 for file_name, label in train_file_dict.items():
     (rate, audio_ori) = wav.read(train_audio_path + file_name)
+    if rate == 16000:
+        print file_name
+        continue
     for pre_idx in xrange(audio_ori.shape[0]):
-        if audio_ori[pre_idx] > amp_thres:
+        if np.abs(audio_ori[pre_idx]) > amp_thres:
             break
     for sur_idx in xrange(audio_ori.shape[0] - 1, 0 , -1):
-        if audio_ori[sur_idx] > amp_thres:
+        if np.abs(audio_ori[sur_idx]) > amp_thres:
             break
     audio_ori = audio_ori[pre_idx:sur_idx]
+    print file_name
+    print audio_ori.shape
     tmp, _ = mfcc.fbank(audio_ori, samplerate = rate, win_length = w_len,\
                 win_step = w_step)
     if tmp.shape[0] > trunc_len:
