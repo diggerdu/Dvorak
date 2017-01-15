@@ -10,9 +10,9 @@ data_path = "../data/"
 logdir = './logs'
 KEEPPROB = 0.7
 # Parameters
-learning_rate = 0.0002
+learning_rate = 0.0005
 training_iters = 10000000000
-batch_size = 1596
+batch_size = 1024
 display_step = 2
 milestone = 0.78
 
@@ -72,6 +72,8 @@ accurancy_sum = tf.summary.scalar('accurancy', accurancy)
 #summary_writer = tf.train.SummaryWriter(logdir, sess)
 
 
+for v in tf.all_variables():
+    print (v.name)
 # Evaluate model
 #correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
 #accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
@@ -81,12 +83,11 @@ init = tf.initialize_all_variables()
 saver = tf.train.Saver()
 #load data
 
-train_true_data = np.load(data_path + "train_true_data.npy") / 180000.00
-train_fake_data = np.load(data_path + "train_fake_data.npy") / 180000.00
-eva_true_data = np.load(data_path + "eva_true_data.npy") / 180000.00
-eva_fake_data = np.load(data_path + "eva_fake_data.npy") / 180000.00
+train_true_data = np.load(data_path + "train_true_data.npy")
+train_fake_data = np.load(data_path + "train_fake_data.npy")
+eva_true_data = np.load(data_path + "eva_true_data.npy")
+eva_fake_data = np.load(data_path + "eva_fake_data.npy")
 
-print ('mean', np.mean(train_true_data))
 print ('train',train_true_data.shape)
 print ('fake', train_fake_data.shape)
 
@@ -103,7 +104,7 @@ validate_best = 0
 with tf.Session() as sess:
     sess.run(init)
     writer = tf.summary.FileWriter(logdir, sess.graph)
-    #saver.restore(sess, "./checkpoint/extraoridinary.ckpt".format(KEEPPROB))
+    saver.restore(sess, "./checkpoint/extraoridinary.ckpt".format(KEEPPROB))
     step = 1
     # Keep training until reach max iterations
     while step * batch_size < training_iters:
