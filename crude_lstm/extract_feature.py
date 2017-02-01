@@ -86,50 +86,40 @@ train_fake_data = np.load(data_path + "train_fake_data.npy") / 180000.00
 eva_true_data = np.load(data_path + "eva_true_data.npy") / 180000.00
 eva_fake_data = np.load(data_path + "eva_fake_data.npy") / 180000.00
 
-print ('mean', np.mean(train_true_data))
-print ('train',train_true_data.shape)
-print ('fake', train_fake_data.shape)
-
-train_data = np.vstack((train_true_data, train_fake_data))
-train_label = np.vstack((np.ones((train_true_data.shape[0], 1)), np.zeros((train_fake_data.shape[0], 1))))
-
-eva_data = np.vstack((eva_true_data, eva_fake_data))
-eva_label = np.vstack((np.ones((eva_true_data.shape[0], 1)), np.zeros((eva_fake_data.shape[0], 1))))
-
-validate_best = 0
-
 
 # Launch the graph
 with tf.Session() as sess:
     sess.run(init)
-    writer = tf.summary.FileWriter(logdir, sess.graph)
     saver.restore(sess, "./checkpoint/extraoridinary-keep_prob-{}".format(KEEPPROB))
+    feature_op = sess.graph.get_operation_by_name('dropout/mul').outputs[0]
+    '''
+    train_true_feature = sess.run(feature_op, feed_dict={x:train_true_data, K:1.0}) 
+    train_fake_feature = sess.run(feature_op, feed_dict={x:train_fake_data, K:1.0}) 
+    eva_true_feature = sess.run(feature_op, feed_dict={x:eva_true_data, K:1.0}) 
+    eva_fake_feature = sess.run(feature_op, feed_dict={x:eva_fake_data, K:1.0}) 
     
-    step = 1
-    # Keep training until reach max iterations
-    while step * batch_size < training_iters:
-        idx = np.random.choice(train_data.shape[0], batch_size)
-        batch_x = train_data[idx]
-        batch_y = train_label[idx]
-        embark = time.time()
-        _, loss_sum_ = sess.run([optimizer, loss_sum], feed_dict={x: batch_x, y: batch_y, K:KEEPPROB})
-        prob, debug = sess.run([pred, accurancy], feed_dict={x: batch_x, y: batch_y, K:1.0})
-        print ('debug', debug)
-        print (prob[:10])
-        writer.add_summary(loss_sum_, global_step = step)
-        print (time.time() - embark,"s per batch")
-        if step % 3000 == 0:
-            saver.save(sess, './checkpoint/model-keep_prob-{}'.format(KEEPPROB))
-        if step % display_step == 0:
-            accurancy_sum_, accurancy_ = sess.run([accurancy_sum, accurancy], feed_dict={x: eva_data, y: eva_label, K:1.0})
-            writer.add_summary(accurancy_sum_, global_step = step)
-            print ("after %d epoch, thus far validate accurancy is : %f" %(step, accurancy_))
-            if  accurancy_ > milestone:
-                if accurancy_ > validate_best:
-                    validate_best = accurancy_
-                    if validate_best > 0.79:
-                        saver.save(sess, "./checkpoint/extraoridinary-keep_prob-{}".format(KEEPPROB))
-                print ("####thus far best validate accurancy is : %f #####" %(validate_best))
-                np.save("real.npy", eva_label)
-        step += 1
-    print("Optimization Finished!")
+    
+    
+    np.save(data_path + 'train_true_feature', train_true_feature)
+    np.save(data_path + 'train_fake_feature', train_fake_feature)
+    np.save(data_path + 'eva_true_feature', eva_true_feature)
+    np.save(data_path + 'eva_fake_feature', eva_fake_feature)
+    '''
+    import mfcc
+    import os
+    import librosa
+    au_path = 'wrong_sample'
+    input_data = list()
+    for sam in os.listdir(au_path):
+        tmp, sr = librosa.load(au_path+'/'+sam, sr=8000)
+        assert sr==8000
+        tmp = tmp[:15360]
+        mfcc_f,_ = mfcc.fbank(tmp, samplerate=sr,win_length=0.032,win_step=0.032)
+        print (mfcc_f.shape)
+        input_data.append(mfcc_f)
+    input_data = np.asarray(input_data)
+    print (input_data.shape)
+    assert(input_data.shape[1] == 60)
+    wa_feature = sess.run(feature_op, feed_dict={x:input_data, K:1.0})
+    print (wa_feature.shape)
+    np.save('wa_feature', wa_feature)

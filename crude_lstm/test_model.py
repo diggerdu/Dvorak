@@ -23,7 +23,7 @@ class Predictor():
 		saver = tf.train.import_meta_graph('./backup/extraoridinary.ckpt.meta')
 		self.sess = tf.Session()
 		saver.restore(self.sess, "./backup/extraoridinary.ckpt")
-		self.pred = self.sess.graph.get_operation_by_name('Sigmoid').outputs[0]
+		self.pred = self.sess.graph.get_operation_by_name('dropout/mul').outputs[0]
                 self.x = self.sess.graph.get_operation_by_name('Placeholder').outputs[0]
 		self.K = self.sess.graph.get_operation_by_name('Placeholder_2').outputs[0]
 	def predict(self, audio):
@@ -33,18 +33,21 @@ class Predictor():
 		mfcc_feature = np.expand_dims(mfcc_feature, axis = 0)
 		label = self.sess.run(self.pred, feed_dict={self.x:mfcc_feature, self.K:1.0})
 		print (label)
+                print (label.shape)
                 if label[0,0] > 0.5:
 			return True
 		else:
 			return False
 	def test(self):
-		return 'I love heqinglin'
+		return 'I love heqinlin'
 	
 if __name__ == '__main__':
 	p = Predictor()
 	print ('model prepared')
-	import librosa
+        '''
+        import librosa
         import os
         au_path = 'wrong_sample'
         for sam in os.listdir(au_path):
-            print (p.predict(librosa.load(au_path+'/'+sam, sr=8000)[0][:15360]))
+            print (p.predict(librosa.load(au_path+'/'+sam)[0][:15360]))
+        '''

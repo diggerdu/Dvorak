@@ -72,8 +72,8 @@ accurancy_sum = tf.summary.scalar('accurancy', accurancy)
 #summary_writer = tf.train.SummaryWriter(logdir, sess)
 
 
-for v in tf.all_variables():
-    print (v.name)
+#for v in tf.all_variables():
+#    print (v.name)
 # Evaluate model
 #correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
 #accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
@@ -104,31 +104,8 @@ validate_best = 0
 with tf.Session() as sess:
     sess.run(init)
     writer = tf.summary.FileWriter(logdir, sess.graph)
-    saver.restore(sess, "./checkpoint/extraoridinary.ckpt".format(KEEPPROB))
-    step = 1
-    # Keep training until reach max iterations
-    while step * batch_size < training_iters:
-        idx = np.random.choice(train_data.shape[0], batch_size)
-        batch_x = train_data[idx]
-        batch_y = train_label[idx]
-        embark = time.time()
-        _, loss_sum_ = sess.run([optimizer, loss_sum], feed_dict={x: batch_x, y: batch_y, K:KEEPPROB})
-        debug = sess.run(accurancy, feed_dict={x: batch_x, y: batch_y, K:1.0})
-        print ('debug',debug)
-        writer.add_summary(loss_sum_, global_step = step)
-        print (time.time() - embark,"s per batch")
-        if step % 3000 == 0:
-            saver.save(sess, './checkpoint/model-keep_prob-{}'.format(KEEPPROB))
-        if step % display_step == 0:
-            accurancy_sum_, accurancy_ = sess.run([accurancy_sum, accurancy], feed_dict={x: eva_data, y: eva_label, K:1.0})
-            writer.add_summary(accurancy_sum_, global_step = step)
-            print ("after %d epoch, thus far validate accurancy is : %f" %(step, accurancy_))
-            if  accurancy_ > milestone:
-                if accurancy_ > validate_best:
-                    validate_best = accurancy_
-                    if validate_best > 0.79:
-                        saver.save(sess, "./checkpoint/extraoridinary-keep_prob-{}".format(KEEPPROB))
-                print ("####thus far best validate accurancy is : %f #####" %(validate_best))
-                np.save("real.npy", eva_label)
-        step += 1
-    print("Optimization Finished!")
+    saver.restore(sess, "./checkpoint/extraoridinary-keep_prob-{}".format(KEEPPROB))
+    y_pred = np.asarray(sess.run(pred, feed_dict={x:eva_data, K:1.0}), dtype=np.int16)
+    from sklearn.metrics import confusion_matrix
+    print (confusion_matrix(np.squeeze(eva_label), y_pred, labels=[0,1]))
+    print (confusion_matrix(np.squeeze(eva_label), y_pred, labels=[1,0]))
